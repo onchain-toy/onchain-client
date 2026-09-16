@@ -6,7 +6,7 @@ export interface BadgeMetadata {
   image?: string;
 }
 
-async function fetchMetadata(uri: string): Promise<BadgeMetadata | null> {
+export async function fetchMetadata(uri: string): Promise<BadgeMetadata | null> {
   try {
     const res = await fetch(uri);
     if (!res.ok) return null;

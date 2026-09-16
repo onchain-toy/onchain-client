@@ -529,13 +529,38 @@
   font-family: var(--mono);
 }
 
+/* Metadata URI live preview (CreateBadgeTypeForm) - fetches and renders the
+   URI before it can be submitted, so a typo shows up here instead of
+   becoming a permanent, unfixable on-chain badge type. */
+
+.uri-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 640px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  margin-top: -4px;
+}
+
+.uri-preview-invalid {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.uri-preview-name {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
 /* Forms */
 
 .form {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 480px;
 }
 
 /* Wraps a .form plus its explanatory hint-text/banner - the fields stay
@@ -565,6 +590,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-width: 480px;
   font-family: var(--mono);
   font-size: 12px;
   text-transform: uppercase;

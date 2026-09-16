@@ -2,12 +2,12 @@ import { useState, type ReactElement } from "react";
 import { useReadContract } from "wagmi";
 import { badgeTokenAbi, badgeTokenAddress } from "../contracts/badgeToken";
 import { useAdminAccess } from "../hooks/useAdminAccess";
+import { useMetadataPreview } from "../hooks/useMetadataPreview";
 import { useRefetchOnConfirm } from "../hooks/useRefetchOnConfirm";
 import { useTxStatus } from "../hooks/useTxStatus";
+import { isValidAddressInput } from "../lib/address";
 import { GAS_FEES } from "../lib/gasFees";
 import { TxStatusBanner } from "./TxStatusBanner";
-
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 // Only ever mounted (see App.tsx) once useAdminAccess() has already
 // confirmed the connected wallet holds at least one of these roles.
@@ -39,11 +39,15 @@ function CreateBadgeTypeForm() {
   const { write, hash, status } = useTxStatus();
   useRefetchOnConfirm(status.phase);
 
+  const preview = useMetadataPreview(uri);
+  const canSubmit = preview.isValid && status.phase !== "pending";
+
   return (
     <form
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
+        if (!preview.isValid) return;
         write({
           address: badgeTokenAddress,
           abi: badgeTokenAbi,
@@ -58,12 +62,33 @@ function CreateBadgeTypeForm() {
         메타데이터 URI
         <input value={uri} onChange={(e) => setUri(e.target.value)} placeholder="https://.../1.json" required />
       </label>
+
+      {!preview.isEmpty && (
+        <div className={`uri-preview ${preview.isInvalid ? "uri-preview-invalid" : ""}`}>
+          {preview.isChecking && <span className="hint-text">메타데이터 확인 중...</span>}
+          {preview.isInvalid && (
+            <span className="error-text">
+              이 URL에서 올바른 메타데이터(name/image 포함된 JSON)를 불러오지 못했습니다. 오타는 아닌지 확인해주세요 —
+              등록하면 나중에 고칠 수 없습니다.
+            </span>
+          )}
+          {preview.isValid && (
+            <>
+              <div className="badge-thumb">
+                <img src={preview.data?.image} alt={preview.data?.name} />
+              </div>
+              <span className="uri-preview-name">{preview.data?.name}</span>
+            </>
+          )}
+        </div>
+      )}
+
       <label className="field checkbox-field">
         <input type="checkbox" checked={transferable} onChange={(e) => setTransferable(e.target.checked)} />
         전송 가능(transferable)
       </label>
       <div>
-        <button type="submit" className="btn btn-primary" disabled={status.phase === "pending"}>
+        <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
           등록
         </button>
       </div>
@@ -85,15 +110,16 @@ function RoleManagementForm() {
   useRefetchOnConfirm(status.phase);
 
   const roleHash = role === "MINTER" ? minterRole : pauserRole;
-  const disabled = !account || !roleHash || status.phase === "pending";
+  const addressInvalid = account.length > 0 && !isValidAddressInput(account);
+  const disabled = !isValidAddressInput(account) || !roleHash || status.phase === "pending";
 
   function submit(functionName: "grantRole" | "revokeRole") {
-    if (!roleHash || !account) return;
+    if (!roleHash || !isValidAddressInput(account)) return;
     write({
       address: badgeTokenAddress,
       abi: badgeTokenAbi,
       functionName,
-      args: [roleHash, account as `0x${string}`],
+      args: [roleHash, account.trim() as `0x${string}`],
       ...GAS_FEES,
     });
   }
@@ -105,6 +131,7 @@ function RoleManagementForm() {
         대상 주소
         <input value={account} onChange={(e) => setAccount(e.target.value)} placeholder="0x..." />
       </label>
+      {addressInvalid && <p className="error-text">올바른 주소 형식이 아닙니다 (0x로 시작하는 40자리 16진수).</p>}
       <label className="field">
         역할
         <select value={role} onChange={(e) => setRole(e.target.value as keyof typeof ROLE_LABELS)}>
@@ -180,16 +207,20 @@ function MintForm() {
   const { write, hash, status } = useTxStatus();
   useRefetchOnConfirm(status.phase);
 
+  const toInvalid = to.length > 0 && !isValidAddressInput(to);
+  const canSubmit = isValidAddressInput(to) && status.phase !== "pending";
+
   return (
     <form
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
+        if (!isValidAddressInput(to)) return;
         write({
           address: badgeTokenAddress,
           abi: badgeTokenAbi,
           functionName: "mint",
-          args: [(to || ZERO_ADDRESS) as `0x${string}`, BigInt(id || 0), BigInt(amount || 0), "0x"],
+          args: [to.trim() as `0x${string}`, BigInt(id || 0), BigInt(amount || 0), "0x"],
           ...GAS_FEES,
         });
       }}
@@ -199,18 +230,19 @@ function MintForm() {
         받는 주소
         <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..." required />
       </label>
+      {toInvalid && <p className="error-text">올바른 주소 형식이 아닙니다 (0x로 시작하는 40자리 16진수).</p>}
       <div className="field-row">
         <label className="field">
           배지 id
-          <input value={id} onChange={(e) => setId(e.target.value)} type="number" min="1" required />
+          <input value={id} onChange={(e) => setId(e.target.value)} type="number" min="1" step="1" required />
         </label>
         <label className="field">
           수량
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" required />
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" step="1" required />
         </label>
       </div>
       <div>
-        <button type="submit" className="btn btn-primary" disabled={status.phase === "pending"}>
+        <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
           민팅
         </button>
       </div>

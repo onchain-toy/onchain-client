@@ -3,10 +3,9 @@ import { useAccount } from "wagmi";
 import { badgeTokenAbi, badgeTokenAddress } from "../contracts/badgeToken";
 import { useRefetchOnConfirm } from "../hooks/useRefetchOnConfirm";
 import { useTxStatus } from "../hooks/useTxStatus";
+import { isValidAddressInput } from "../lib/address";
 import { GAS_FEES } from "../lib/gasFees";
 import { TxStatusBanner } from "./TxStatusBanner";
-
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 // Lets any connected wallet (not just admin/minter) try to break the
 // transfer/approval block, straight from the UI - the same thing that was
@@ -34,23 +33,21 @@ function TransferAttemptForm() {
   const { write, hash, status } = useTxStatus();
   useRefetchOnConfirm(status.phase);
 
+  const toInvalid = to.length > 0 && !isValidAddressInput(to);
+  const canSubmit = Boolean(address) && isValidAddressInput(to) && status.phase !== "pending";
+
   return (
     <div className="form-stack">
       <form
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
+          if (!address || !isValidAddressInput(to)) return;
           write({
             address: badgeTokenAddress,
             abi: badgeTokenAbi,
             functionName: "safeTransferFrom",
-            args: [
-              address ?? ZERO_ADDRESS,
-              (to || ZERO_ADDRESS) as `0x${string}`,
-              BigInt(id || 0),
-              BigInt(amount || 0),
-              "0x",
-            ],
+            args: [address, to.trim() as `0x${string}`, BigInt(id || 0), BigInt(amount || 0), "0x"],
             ...GAS_FEES,
           });
         }}
@@ -60,18 +57,19 @@ function TransferAttemptForm() {
           받는 주소
           <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..." required />
         </label>
+        {toInvalid && <p className="error-text">올바른 주소 형식이 아닙니다 (0x로 시작하는 40자리 16진수).</p>}
         <div className="field-row">
           <label className="field">
             배지 id
-            <input value={id} onChange={(e) => setId(e.target.value)} type="number" min="1" required />
+            <input value={id} onChange={(e) => setId(e.target.value)} type="number" min="1" step="1" required />
           </label>
           <label className="field">
             수량
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" required />
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" step="1" required />
           </label>
         </div>
         <div>
-          <button type="submit" className="btn btn-primary" disabled={status.phase === "pending"}>
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
             전송 시도
           </button>
         </div>
@@ -88,17 +86,21 @@ function ApprovalAttemptForm() {
   const [operator, setOperator] = useState("");
   const { write, hash, status } = useTxStatus();
 
+  const operatorInvalid = operator.length > 0 && !isValidAddressInput(operator);
+  const canSubmit = isValidAddressInput(operator) && status.phase !== "pending";
+
   return (
     <div className="form-stack">
       <form
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
+          if (!isValidAddressInput(operator)) return;
           write({
             address: badgeTokenAddress,
             abi: badgeTokenAbi,
             functionName: "setApprovalForAll",
-            args: [(operator || ZERO_ADDRESS) as `0x${string}`, true],
+            args: [operator.trim() as `0x${string}`, true],
             ...GAS_FEES,
           });
         }}
@@ -108,8 +110,9 @@ function ApprovalAttemptForm() {
           operator 주소
           <input value={operator} onChange={(e) => setOperator(e.target.value)} placeholder="0x..." required />
         </label>
+        {operatorInvalid && <p className="error-text">올바른 주소 형식이 아닙니다 (0x로 시작하는 40자리 16진수).</p>}
         <div>
-          <button type="submit" className="btn btn-primary" disabled={status.phase === "pending"}>
+          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
             승인 시도
           </button>
         </div>
