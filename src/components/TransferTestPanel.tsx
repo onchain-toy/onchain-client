@@ -15,11 +15,12 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 // expected to revert (see lib/gasFees.ts).
 export function TransferTestPanel() {
   const { isConnected } = useAccount();
-  if (!isConnected) return null;
+  if (!isConnected) return <p className="hint-text">테스트를 진행하려면 지갑을 연결하세요.</p>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div>
       <TransferAttemptForm />
+      <div className="card-section" />
       <ApprovalAttemptForm />
     </div>
   );
@@ -34,42 +35,52 @@ function TransferAttemptForm() {
   useRefetchOnConfirm(status.phase);
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        write({
-          address: badgeTokenAddress,
-          abi: badgeTokenAbi,
-          functionName: "safeTransferFrom",
-          args: [
-            address ?? ZERO_ADDRESS,
-            (to || ZERO_ADDRESS) as `0x${string}`,
-            BigInt(id || 0),
-            BigInt(amount || 0),
-            "0x",
-          ],
-          ...GAS_FEES,
-        });
-      }}
-    >
-      <h3>전송 시도 (내 배지를 다른 주소로)</h3>
-      <label>
-        받는 주소 <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..." required />
-      </label>
-      <label style={{ marginLeft: 12 }}>
-        배지 id <input value={id} onChange={(e) => setId(e.target.value)} type="number" min="1" required style={{ width: 80 }} />
-      </label>
-      <label style={{ marginLeft: 12 }}>
-        수량 <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" required style={{ width: 80 }} />
-      </label>
-      <button type="submit" style={{ marginLeft: 12 }} disabled={status.phase === "pending"}>
-        전송 시도
-      </button>
-      <p style={{ color: "#666", fontSize: 13 }}>
+    <div className="form-stack">
+      <form
+        className="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          write({
+            address: badgeTokenAddress,
+            abi: badgeTokenAbi,
+            functionName: "safeTransferFrom",
+            args: [
+              address ?? ZERO_ADDRESS,
+              (to || ZERO_ADDRESS) as `0x${string}`,
+              BigInt(id || 0),
+              BigInt(amount || 0),
+              "0x",
+            ],
+            ...GAS_FEES,
+          });
+        }}
+      >
+        <h3 className="form-title">전송 시도 (내 배지를 다른 주소로)</h3>
+        <label className="field">
+          받는 주소
+          <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..." required />
+        </label>
+        <div className="field-row">
+          <label className="field">
+            배지 id
+            <input value={id} onChange={(e) => setId(e.target.value)} type="number" min="1" required />
+          </label>
+          <label className="field">
+            수량
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" required />
+          </label>
+        </div>
+        <div>
+          <button type="submit" className="btn btn-primary" disabled={status.phase === "pending"}>
+            전송 시도
+          </button>
+        </div>
+      </form>
+      <p className="hint-text">
         transferable=false인 배지면 <code>BadgeNotTransferable</code>로 revert되는 게 정상입니다.
       </p>
       <TxStatusBanner status={status} hash={hash} />
-    </form>
+    </div>
   );
 }
 
@@ -78,29 +89,35 @@ function ApprovalAttemptForm() {
   const { write, hash, status } = useTxStatus();
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        write({
-          address: badgeTokenAddress,
-          abi: badgeTokenAbi,
-          functionName: "setApprovalForAll",
-          args: [(operator || ZERO_ADDRESS) as `0x${string}`, true],
-          ...GAS_FEES,
-        });
-      }}
-    >
-      <h3>승인(operator approval) 시도</h3>
-      <label>
-        operator 주소 <input value={operator} onChange={(e) => setOperator(e.target.value)} placeholder="0x..." required />
-      </label>
-      <button type="submit" style={{ marginLeft: 12 }} disabled={status.phase === "pending"}>
-        승인 시도
-      </button>
-      <p style={{ color: "#666", fontSize: 13 }}>
+    <div className="form-stack">
+      <form
+        className="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          write({
+            address: badgeTokenAddress,
+            abi: badgeTokenAbi,
+            functionName: "setApprovalForAll",
+            args: [(operator || ZERO_ADDRESS) as `0x${string}`, true],
+            ...GAS_FEES,
+          });
+        }}
+      >
+        <h3 className="form-title">승인(operator approval) 시도</h3>
+        <label className="field">
+          operator 주소
+          <input value={operator} onChange={(e) => setOperator(e.target.value)} placeholder="0x..." required />
+        </label>
+        <div>
+          <button type="submit" className="btn btn-primary" disabled={status.phase === "pending"}>
+            승인 시도
+          </button>
+        </div>
+      </form>
+      <p className="hint-text">
         이 컨트랙트는 승인 자체를 전면 차단합니다 — 항상 <code>ApprovalNotAllowed</code>로 revert되는 게 정상입니다.
       </p>
       <TxStatusBanner status={status} hash={hash} />
-    </form>
+    </div>
   );
 }
