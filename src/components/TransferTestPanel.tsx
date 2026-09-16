@@ -254,7 +254,7 @@ function BurnAttemptForm() {
       </form>
       <p className="hint-text">
         본인 소유 배지만 소각할 수 있습니다(승인이 전면 차단돼 있어 대리 소각은 불가능). <code>transferable</code>{" "}
-        여부와 무관하게 항상 성공하는 게 정상입니다 — mint/burn은 전송 차단 대상이 아니거든요.
+        여부와 무관하게 항상 성공하는 게 정상입니다.
       </p>
       <TxStatusBanner status={status} hash={hash} />
     </div>
