@@ -1,11 +1,29 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { polygonAmoy } from "wagmi/chains";
+import { useAdminAccess } from "../hooks/useAdminAccess";
+
+// Role -> emoji shown next to the connected address, so which hats a
+// wallet wears (admin/minter/pauser, any combination) is visible at a
+// glance without opening the admin drawer.
+const ROLE_BADGES = [
+  { has: "isAdmin", emoji: "👑", label: "admin" },
+  { has: "isMinter", emoji: "💎", label: "minter" },
+  { has: "isPauser", emoji: "⏸️", label: "pauser" },
+] as const;
 
 export function WalletBar() {
   const { address, isConnected, chainId } = useAccount();
   const { connect, connectors, isPending: isConnecting, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
+  const access = useAdminAccess();
+
+  // DEFAULT_ADMIN_ROLE outranks the others for display purposes - an
+  // admin wallet shows only the crown, even if it also happens to hold
+  // MINTER_ROLE/PAUSER_ROLE.
+  const roleBadges = access.isAdmin
+    ? ROLE_BADGES.filter((b) => b.has === "isAdmin")
+    : ROLE_BADGES.filter((b) => access[b.has]);
 
   const wrongNetwork = isConnected && chainId !== polygonAmoy.id;
 
@@ -40,6 +58,13 @@ export function WalletBar() {
     <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
       <div className="wallet-bar">
         <span className="address-chip">
+          {roleBadges.length > 0 && (
+            <span className="role-badges" title={roleBadges.map((b) => b.label).join(" · ")}>
+              {roleBadges.map((b) => (
+                <span key={b.label}>{b.emoji}</span>
+              ))}
+            </span>
+          )}
           {address?.slice(0, 6)}...{address?.slice(-4)}
         </span>
         <button className="btn btn-ghost" onClick={() => disconnect()}>

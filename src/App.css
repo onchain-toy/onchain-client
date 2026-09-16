@@ -190,7 +190,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: transparent;
@@ -199,12 +199,17 @@
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  transition: background 0.15s, border-color 0.15s, opacity 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s, color 0.15s, box-shadow 0.15s,
+    transform 0.1s;
 }
 
 .btn:hover:not(:disabled) {
   border-color: var(--border-strong);
   background: var(--surface-2);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .btn:disabled {
@@ -220,6 +225,7 @@
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 6px 20px rgba(255, 87, 26, 0.35);
 }
 
 .btn-ghost {
@@ -233,6 +239,25 @@
   border-color: #e4e4e4;
 }
 
+/* Spinner shown inside a button while its tx is pending */
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.75;
+  animation: btn-spin 0.6s linear infinite;
+}
+
 /* Wallet bar */
 
 .wallet-bar {
@@ -243,13 +268,23 @@
 }
 
 .address-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--mono);
   font-size: 14px;
   color: var(--text-h);
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 7px 12px;
+  padding: 7px 16px;
+}
+
+.role-badges {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1;
 }
 
 /* Status text / banners */

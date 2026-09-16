@@ -7,7 +7,8 @@ import { useRefetchOnConfirm } from "../hooks/useRefetchOnConfirm";
 import { useTxStatus } from "../hooks/useTxStatus";
 import { isValidAddressInput } from "../lib/address";
 import { GAS_FEES } from "../lib/gasFees";
-import { TxStatusBanner } from "./TxStatusBanner";
+import { parseBigIntList } from "../lib/parseList";
+import { ButtonSpinner, TxStatusBanner } from "./TxStatusBanner";
 
 // Only ever mounted (see App.tsx) once useAdminAccess() has already
 // confirmed the connected wallet holds at least one of these roles.
@@ -16,9 +17,11 @@ export function AdminPanel() {
 
   const sections = [
     isAdmin && <CreateBadgeTypeForm key="create" />,
+    isAdmin && <TransferableToggleForm key="toggle" />,
     isAdmin && <RoleManagementForm key="roles" />,
     isPauser && <PauserControls key="pauser" />,
     isMinter && <MintForm key="mint" />,
+    isMinter && <MintBatchForm key="mintBatch" />,
   ].filter((section): section is ReactElement => Boolean(section));
 
   return (
@@ -89,7 +92,80 @@ function CreateBadgeTypeForm() {
       </label>
       <div>
         <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+          {status.phase === "pending" && <ButtonSpinner />}
           등록
+        </button>
+      </div>
+      <TxStatusBanner status={status} hash={hash} />
+    </form>
+  );
+}
+
+function TransferableToggleForm() {
+  const [id, setId] = useState("");
+  const [transferable, setTransferable] = useState(false);
+  const { write, hash, status } = useTxStatus();
+  useRefetchOnConfirm(status.phase);
+
+  const idBigInt = id ? BigInt(id) : undefined;
+  const {
+    data: currentState,
+    error: readError,
+    isFetching: isReadingState,
+  } = useReadContract({
+    address: badgeTokenAddress,
+    abi: badgeTokenAbi,
+    functionName: "isTransferable",
+    args: idBigInt !== undefined ? [idBigInt] : undefined,
+    query: { enabled: idBigInt !== undefined },
+  });
+
+  return (
+    <form
+      className="form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (idBigInt === undefined) return;
+        write({
+          address: badgeTokenAddress,
+          abi: badgeTokenAbi,
+          functionName: "setTransferable",
+          args: [idBigInt, transferable],
+          ...GAS_FEES,
+        });
+      }}
+    >
+      <h3 className="form-title">전송 가능 여부 토글 (admin)</h3>
+      <label className="field">
+        배지 id
+        <input value={id} onChange={(e) => setId(e.target.value)} type="number" min="1" step="1" required />
+      </label>
+      {idBigInt !== undefined && (
+        <p className="hint-text">
+          현재 상태:{" "}
+          {readError ? (
+            <span className="error-text">등록되지 않은 id입니다.</span>
+          ) : isReadingState ? (
+            "확인 중..."
+          ) : (
+            <span className={currentState ? "transferable-yes" : "transferable-no"}>
+              {currentState ? "가능" : "불가"}
+            </span>
+          )}
+        </p>
+      )}
+      <label className="field checkbox-field">
+        <input type="checkbox" checked={transferable} onChange={(e) => setTransferable(e.target.checked)} />
+        전송 가능으로 설정
+      </label>
+      <div>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={idBigInt === undefined || status.phase === "pending"}
+        >
+          {status.phase === "pending" && <ButtonSpinner />}
+          적용
         </button>
       </div>
       <TxStatusBanner status={status} hash={hash} />
@@ -144,9 +220,11 @@ function RoleManagementForm() {
       </label>
       <div className="field-row">
         <button type="button" className="btn btn-primary" disabled={disabled} onClick={() => submit("grantRole")}>
+          {status.phase === "pending" && <ButtonSpinner />}
           부여
         </button>
         <button type="button" className="btn" disabled={disabled} onClick={() => submit("revokeRole")}>
+          {status.phase === "pending" && <ButtonSpinner />}
           회수
         </button>
       </div>
@@ -182,6 +260,7 @@ function PauserControls() {
             write({ address: badgeTokenAddress, abi: badgeTokenAbi, functionName: "pause", ...GAS_FEES })
           }
         >
+          {status.phase === "pending" && <ButtonSpinner />}
           일시정지
         </button>
         <button
@@ -192,6 +271,7 @@ function PauserControls() {
             write({ address: badgeTokenAddress, abi: badgeTokenAbi, functionName: "unpause", ...GAS_FEES })
           }
         >
+          {status.phase === "pending" && <ButtonSpinner />}
           재개
         </button>
       </div>
@@ -243,7 +323,75 @@ function MintForm() {
       </div>
       <div>
         <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+          {status.phase === "pending" && <ButtonSpinner />}
           민팅
+        </button>
+      </div>
+      <TxStatusBanner status={status} hash={hash} />
+    </form>
+  );
+}
+
+function MintBatchForm() {
+  const [to, setTo] = useState("");
+  const [ids, setIds] = useState("");
+  const [amounts, setAmounts] = useState("");
+  const { write, hash, status } = useTxStatus();
+  useRefetchOnConfirm(status.phase);
+
+  const toInvalid = to.length > 0 && !isValidAddressInput(to);
+  const idList = parseBigIntList(ids);
+  const amountList = parseBigIntList(amounts);
+  const listsInvalid = idList === null || amountList === null;
+  const lengthMismatch =
+    idList !== null && amountList !== null && idList.length > 0 && idList.length !== amountList.length;
+  const canSubmit =
+    isValidAddressInput(to) &&
+    idList !== null &&
+    amountList !== null &&
+    idList.length > 0 &&
+    idList.length === amountList.length &&
+    status.phase !== "pending";
+
+  return (
+    <form
+      className="form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!canSubmit || idList === null || amountList === null) return;
+        write({
+          address: badgeTokenAddress,
+          abi: badgeTokenAbi,
+          functionName: "mintBatch",
+          args: [to.trim() as `0x${string}`, idList, amountList, "0x"],
+          ...GAS_FEES,
+        });
+      }}
+    >
+      <h3 className="form-title">배지 일괄 민팅 (minter)</h3>
+      <label className="field">
+        받는 주소
+        <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..." required />
+      </label>
+      {toInvalid && <p className="error-text">올바른 주소 형식이 아닙니다 (0x로 시작하는 40자리 16진수).</p>}
+      <label className="field">
+        배지 id 목록 (쉼표로 구분)
+        <input value={ids} onChange={(e) => setIds(e.target.value)} placeholder="1, 2, 3" required />
+      </label>
+      <label className="field">
+        수량 목록 (쉼표로 구분, id와 같은 순서·개수)
+        <input value={amounts} onChange={(e) => setAmounts(e.target.value)} placeholder="5, 10, 2" required />
+      </label>
+      {listsInvalid && <p className="error-text">숫자와 쉼표만 입력해주세요 (예: 1, 2, 3).</p>}
+      {lengthMismatch && (
+        <p className="error-text">
+          id 개수({idList?.length})와 수량 개수({amountList?.length})가 다릅니다.
+        </p>
+      )}
+      <div>
+        <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+          {status.phase === "pending" && <ButtonSpinner />}
+          일괄 민팅
         </button>
       </div>
       <TxStatusBanner status={status} hash={hash} />

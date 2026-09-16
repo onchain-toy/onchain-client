@@ -1,5 +1,10 @@
 import type { TxStatus } from "../hooks/useTxStatus";
 
+// Dropped into a submit button while its tx is pending: <button>{status.phase === "pending" && <ButtonSpinner />}라벨</button>
+export function ButtonSpinner() {
+  return <span className="btn-spinner" aria-hidden="true" />;
+}
+
 const VARIANT: Record<TxStatus["phase"], string> = {
   idle: "",
   pending: "banner-warning",
