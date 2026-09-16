@@ -3,6 +3,7 @@ import { WalletBar } from "./components/WalletBar";
 import { BadgeList } from "./components/BadgeList";
 import { AdminPanel } from "./components/AdminPanel";
 import { TransferTestPanel } from "./components/TransferTestPanel";
+import { badgeTokenAddress } from "./contracts/badgeToken";
 import { useAdminAccess } from "./hooks/useAdminAccess";
 import "./App.css";
 
@@ -18,6 +19,14 @@ function App() {
           <span className="app-eyebrow">Polygon Amoy</span>
           <h1 className="app-title">Badge dApp</h1>
           <p className="app-subtitle">ERC-1155 · non-transferable by default</p>
+          <a
+            className="contract-chip"
+            href={`https://amoy.polygonscan.com/address/${badgeTokenAddress}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            컨트랙트 {badgeTokenAddress.slice(0, 6)}...{badgeTokenAddress.slice(-4)} ↗
+          </a>
         </div>
         <div className="header-actions">
           <WalletBar />
