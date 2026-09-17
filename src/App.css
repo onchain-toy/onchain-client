@@ -573,6 +573,23 @@
   font-size: 12px;
 }
 
+/* Unused-metadata admin checklist */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
 .transferable-yes {
   color: var(--accent);
   font-family: var(--mono);

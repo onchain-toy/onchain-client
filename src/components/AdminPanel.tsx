@@ -8,6 +8,7 @@ import { useTxStatus } from "../hooks/useTxStatus";
 import { isValidAddressInput } from "../lib/address";
 import { GAS_FEES } from "../lib/gasFees";
 import { parseBigIntList } from "../lib/parseList";
+import { useUnusedMetadataFiles } from "../hooks/useUnusedMetadata";
 import { ButtonSpinner, TxStatusBanner } from "./TxStatusBanner";
 
 // Only ever mounted (see App.tsx) once useAdminAccess() has already
@@ -17,6 +18,7 @@ export function AdminPanel() {
 
   const sections = [
     isAdmin && <CreateBadgeTypeForm key="create" />,
+    isAdmin && <UnusedMetadataChecklist key="unused" />,
     isAdmin && <TransferableToggleForm key="toggle" />,
     isAdmin && <RoleManagementForm key="roles" />,
     isPauser && <PauserControls key="pauser" />,
@@ -98,6 +100,44 @@ function CreateBadgeTypeForm() {
       </div>
       <TxStatusBanner status={status} hash={hash} />
     </form>
+  );
+}
+
+function UnusedMetadataChecklist() {
+  const { isLoading, error, files } = useUnusedMetadataFiles();
+
+  return (
+    <div className="form">
+      <h3 className="form-title">미사용 메타데이터 체크리스트 (admin 참고용)</h3>
+      {isLoading && <p className="hint-text">저장소 확인 중...</p>}
+      {error && <p className="error-text">metadata 저장소 목록을 불러오지 못했습니다.</p>}
+
+      {!isLoading && !error && files.length === 0 && (
+        <p className="hint-text">미사용 파일이 없습니다.</p>
+      )}
+
+      {files.length > 0 && (
+        <div className="checklist">
+          {files.map((f) => (
+            <div className="checklist-item" key={f.name}>
+              <div className="badge-thumb">
+                {f.metadata?.image ? (
+                  <img src={f.metadata.image} alt={f.metadata?.name ?? f.name} loading="lazy" />
+                ) : (
+                  <span className="badge-thumb-fallback">?</span>
+                )}
+              </div>
+              <div className="badge-name-cell">
+                <span className="badge-name">{f.metadata?.name ?? f.name}</span>
+                <a className="uri-cell" href={f.url} target="_blank" rel="noreferrer">
+                  {f.name}
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
