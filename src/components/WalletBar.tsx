@@ -29,6 +29,7 @@ export function WalletBar() {
 
   if (!isConnected) {
     const injected = connectors.find((c) => c.id === "injected") ?? connectors[0];
+    const walletConnect = connectors.find((c) => c.id === "walletConnect");
     return (
       <div className="wallet-bar">
         <button
@@ -38,6 +39,15 @@ export function WalletBar() {
         >
           {isConnecting ? "연결 중..." : "지갑 연결"}
         </button>
+        {walletConnect && (
+          <button
+            className="btn btn-ghost"
+            onClick={() => connect({ connector: walletConnect })}
+            disabled={isConnecting}
+          >
+            QR로 연결
+          </button>
+        )}
         {!injected && (
           <p className="error-text">
             브라우저에 지갑 확장 프로그램(MetaMask 등)이 감지되지 않습니다.
